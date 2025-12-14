@@ -87,7 +87,10 @@ fn load_config(
     let config_directory = config_path.parent();
 
     match oxwm::config::parse_lua_config(&config_string, config_directory) {
-        Ok(config) => Ok((config, false)),
+        Ok(mut config) => {
+            config.path = Some(config_path);
+            Ok((config, false))
+        }
         Err(_error) => {
             let template = include_str!("../../templates/config.lua");
             let config = oxwm::config::parse_lua_config(template, None)

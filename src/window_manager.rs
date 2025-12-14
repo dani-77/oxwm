@@ -9,6 +9,7 @@ use crate::layout::{Layout, LayoutBox, LayoutType, layout_from_str, next_layout}
 use crate::monitor::{Monitor, detect_monitors};
 use crate::overlay::{ErrorOverlay, KeybindOverlay, Overlay};
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 use x11rb::cursor::Handle as CursorHandle;
 
 use x11rb::connection::Connection;
@@ -340,27 +341,26 @@ impl WindowManager {
     }
 
     fn try_reload_config(&mut self) -> Result<(), String> {
-        let config_dir = if let Some(xdg_config) = std::env::var_os("XDG_CONFIG_HOME") {
-            std::path::PathBuf::from(xdg_config).join("oxwm")
-        } else if let Some(home) = std::env::var_os("HOME") {
-            std::path::PathBuf::from(home).join(".config").join("oxwm")
-        } else {
-            return Err("Could not find config directory".to_string());
-        };
-
-        let lua_path = config_dir.join("config.lua");
+        let lua_path = self
+            .config
+            .path
+            .take()
+            .expect("Could not find config file. Config path should've been set while loading");
 
         if !lua_path.exists() {
-            return Err("No config.lua file found".to_string());
+            return Err("Could not find config file, has it been moved?".to_string());
         }
 
         let config_str = std::fs::read_to_string(&lua_path)
             .map_err(|e| format!("Failed to read config: {}", e))?;
 
-        let new_config = crate::config::parse_lua_config(&config_str, Some(&config_dir))
+        let config_dir = lua_path.parent();
+
+        let new_config = crate::config::parse_lua_config(&config_str, config_dir)
             .map_err(|e| format!("{}", e))?;
 
         self.config = new_config;
+        self.config.path = Some(lua_path);
         self.error_message = None;
 
         for bar in &mut self.bars {

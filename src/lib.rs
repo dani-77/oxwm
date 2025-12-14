@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 pub mod bar;
 pub mod client;
 pub mod config;
@@ -56,6 +58,9 @@ impl WindowRule {
 
 #[derive(Debug, Clone)]
 pub struct Config {
+    // Meta
+    pub path: Option<PathBuf>,
+
     // Appearance
     pub border_width: u32,
     pub border_focused: u32,
@@ -117,6 +122,7 @@ impl Default for Config {
         const TERMINAL: &str = "st";
 
         Self {
+            path: None,
             border_width: 2,
             border_focused: 0x6dade3,
             border_unfocused: 0xbbbbbb,
