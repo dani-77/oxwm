@@ -145,6 +145,12 @@ oxwm.key.bind({ modkey, "Control", "Shift" }, "7", oxwm.tag.toggletag(6))
 oxwm.key.bind({ modkey, "Control", "Shift" }, "8", oxwm.tag.toggletag(7))
 oxwm.key.bind({ modkey, "Control", "Shift" }, "9", oxwm.tag.toggletag(8))
 
+oxwm.key.bind({ modkey }, "Tab", oxwm.tag.view_next())
+oxwm.key.bind({ modkey, "Shift" }, "Tab", oxwm.tag.view_previous())
+
+oxwm.key.bind({ modkey, "Control" }, "Tab", oxwm.tag.view_next_nonempty())
+oxwm.key.bind({ modkey, "Control", "Shift" }, "Tab", oxwm.tag.view_previous_nonempty())
+
 oxwm.bar.set_blocks({
     oxwm.bar.block.battery({
         format = "Bat: {}%",

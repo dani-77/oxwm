@@ -21,6 +21,12 @@ pub fn tag_mask(tag: usize) -> TagMask {
     1 << tag
 }
 
+/// Get back a tag index from a [`TagMask`]
+pub fn unmask_tag(mask: TagMask) -> usize {
+    // mask only has one bit set, so this works.
+    mask.trailing_zeros() as usize
+}
+
 struct AtomCache {
     net_current_desktop: Atom,
     net_client_info: Atom,
@@ -803,6 +809,46 @@ impl WindowManager {
             KeyAction::ViewTag => {
                 if let Arg::Int(tag_index) = arg {
                     self.view_tag(*tag_index as usize)?;
+                }
+            }
+            KeyAction::ViewNextTag => {
+                let monitor = self.get_selected_monitor();
+                let current_tag_index = unmask_tag(monitor.get_selected_tag()) as i32;
+                let len = self.config.tags.len() as i32;
+                self.view_tag((current_tag_index + 1).rem_euclid(len) as usize)?;
+            }
+            KeyAction::ViewPreviousTag => {
+                let monitor = self.get_selected_monitor();
+                let current_tag_index = unmask_tag(monitor.get_selected_tag()) as i32;
+                let len = self.config.tags.len() as i32;
+                self.view_tag((current_tag_index - 1).rem_euclid(len) as usize)?;
+            }
+            KeyAction::ViewNextNonEmptyTag => {
+                let monitor = self.get_selected_monitor();
+                let current = unmask_tag(monitor.get_selected_tag()) as i32;
+                let len = self.config.tags.len() as i32;
+                let mon_num = monitor.monitor_number;
+
+                for offset in 1..len {
+                    let next = (current + offset).rem_euclid(len) as usize;
+                    if self.has_windows_on_tag(mon_num, next) {
+                        self.view_tag(next)?;
+                        break;
+                    }
+                }
+            }
+            KeyAction::ViewPreviousNonEmptyTag => {
+                let monitor = self.get_selected_monitor();
+                let current = unmask_tag(monitor.get_selected_tag()) as i32;
+                let len = self.config.tags.len() as i32;
+                let mon_num = monitor.monitor_number;
+
+                for offset in 1..len {
+                    let prev = (current - offset).rem_euclid(len) as usize;
+                    if self.has_windows_on_tag(mon_num, prev) {
+                        self.view_tag(prev)?;
+                        break;
+                    }
                 }
             }
             KeyAction::ToggleView => {
@@ -4172,6 +4218,31 @@ impl WindowManager {
             self.update_bar()?;
         }
         Ok(())
+    }
+
+    fn get_selected_monitor(&self) -> &Monitor {
+        &self.monitors[self.selected_monitor]
+    }
+
+    fn has_windows_on_tag(&self, monitor_number: usize, tag_index: usize) -> bool {
+        let Some(monitor) = self.monitors.get(monitor_number) else {
+            return false;
+        };
+
+        let mut current = monitor.clients_head;
+        while let Some(window) = current {
+            // A window should always have a client attatched to it.
+            let Some(client) = self.clients.get(&window) else {
+                break;
+            };
+
+            if unmask_tag(client.tags) == tag_index {
+                return true;
+            }
+            current = client.next;
+        }
+
+        false
     }
 
     fn run_autostart_commands(&self) {

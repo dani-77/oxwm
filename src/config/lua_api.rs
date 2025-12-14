@@ -303,6 +303,19 @@ fn register_tag_module(lua: &Lua, parent: &Table) -> Result<(), ConfigError> {
         create_action_table(lua, "ViewTag", Value::Integer(idx as i64))
     })?;
 
+    let view_next =
+        lua.create_function(|lua, ()| create_action_table(lua, "ViewNextTag", Value::Nil))?;
+
+    let view_previous =
+        lua.create_function(|lua, ()| create_action_table(lua, "ViewPreviousTag", Value::Nil))?;
+
+    let view_next_nonempty =
+        lua.create_function(|lua, ()| create_action_table(lua, "ViewNextNonEmptyTag", Value::Nil))?;
+
+    let view_previous_nonempty = lua.create_function(|lua, ()| {
+        create_action_table(lua, "ViewPreviousNonEmptyTag", Value::Nil)
+    })?;
+
     let toggleview = lua.create_function(|lua, idx: i32| {
         create_action_table(lua, "ToggleView", Value::Integer(idx as i64))
     })?;
@@ -316,6 +329,10 @@ fn register_tag_module(lua: &Lua, parent: &Table) -> Result<(), ConfigError> {
     })?;
 
     tag_table.set("view", view)?;
+    tag_table.set("view_next", view_next)?;
+    tag_table.set("view_previous", view_previous)?;
+    tag_table.set("view_next_nonempty", view_next_nonempty)?;
+    tag_table.set("view_previous_nonempty", view_previous_nonempty)?;
     tag_table.set("toggleview", toggleview)?;
     tag_table.set("move_to", move_to)?;
     tag_table.set("toggletag", toggletag)?;
@@ -849,6 +866,10 @@ fn string_to_action(s: &str) -> mlua::Result<KeyAction> {
         "Quit" => Ok(KeyAction::Quit),
         "Restart" => Ok(KeyAction::Restart),
         "ViewTag" => Ok(KeyAction::ViewTag),
+        "ViewNextTag" => Ok(KeyAction::ViewNextTag),
+        "ViewPreviousTag" => Ok(KeyAction::ViewPreviousTag),
+        "ViewNextNonEmptyTag" => Ok(KeyAction::ViewNextNonEmptyTag),
+        "ViewPreviousNonEmptyTag" => Ok(KeyAction::ViewPreviousNonEmptyTag),
         "ToggleView" => Ok(KeyAction::ToggleView),
         "MoveToTag" => Ok(KeyAction::MoveToTag),
         "ToggleTag" => Ok(KeyAction::ToggleTag),
