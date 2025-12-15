@@ -7,6 +7,13 @@ use x11rb::protocol::xproto::*;
 use crate::errors::X11Error;
 use crate::keyboard::keysyms::{self, Keysym, format_keysym};
 
+/// When adding a new action, update:
+/// 1. Add variant here
+/// 2. lua_api.rs: string_to_action()
+/// 3. lua_api.rs: register_*_module()
+/// 4. window_manager.rs: handle_key_action()
+/// 5. (optionally) overlay/keybind.rs: action_description()
+/// 6. templates/oxwm.lua
 #[derive(Debug, Copy, Clone, Deserialize, PartialEq)]
 pub enum KeyAction {
     Spawn,
