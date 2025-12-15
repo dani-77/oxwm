@@ -1,43 +1,48 @@
 use std::path::PathBuf;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let arguments: Vec<String> = std::env::args().collect();
+static CONFIG_FILE: &str = "config.lua";
+static TEMPLATE: &str = include_str!("../../templates/config.lua");
 
-    let mut custom_config_path: Option<PathBuf> = None;
+enum Args {
+    Exit,
+    Arguments(Vec<String>),
+    Error(String),
+}
 
-    match arguments.get(1).map(|string| string.as_str()) {
-        Some("--version") => {
-            println!("oxwm {}", env!("CARGO_PKG_VERSION"));
-            return Ok(());
-        }
-        Some("--help") => {
-            print_help();
-            return Ok(());
-        }
-        Some("--init") => {
-            init_config()?;
-            return Ok(());
-        }
-        Some("--config") => {
-            if let Some(path) = arguments.get(2) {
-                custom_config_path = Some(PathBuf::from(path));
-            } else {
-                eprintln!("Error: --config requires a path argument");
-                std::process::exit(1);
-            }
-        }
-        _ => {}
-    }
+fn main() {
+    let arguments = match process_args() {
+        Args::Exit => return,
+        Args::Arguments(v) => v,
+        Args::Error(e) => panic!("Could not get valid arguments:\n{}", e),
+    };
 
-    let (config, had_broken_config) = load_config(custom_config_path)?;
+    let config_path = match arguments.get(2) {
+        Some(p) => PathBuf::from(p),
+        None => {
+            let config_directory = get_config_path();
+            let config_path = config_directory.join(CONFIG_FILE);
+            PathBuf::from(config_path)
+        }
+    };
 
-    let mut window_manager = oxwm::window_manager::WindowManager::new(config)?;
+    let (config, had_broken_config) = match load_config(config_path) {
+        Ok((c, b)) => (c, b),
+        Err(e) => panic!("Could not load config:\n{}", e),
+    };
+
+    let mut window_manager = match oxwm::window_manager::WindowManager::new(config) {
+        Ok(wm) => wm,
+        Err(e) => panic!("Could not start window manager:\n{}", e),
+    };
 
     if had_broken_config {
         window_manager.show_migration_overlay();
     }
 
-    let should_restart = window_manager.run()?;
+    let should_restart = match window_manager.run() {
+        Ok(sr) => sr,
+        Err(e) => panic!("{}", e),
+    };
 
     drop(window_manager);
 
@@ -48,53 +53,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .exec();
         eprintln!("Failed to restart: {}", error);
     }
-
-    Ok(())
 }
 
-fn load_config(
-    custom_path: Option<PathBuf>,
-) -> Result<(oxwm::Config, bool), Box<dyn std::error::Error>> {
-    let config_path = if let Some(path) = custom_path {
-        path
-    } else {
-        let config_directory = get_config_path();
-        let lua_path = config_directory.join("config.lua");
-
-        if !lua_path.exists() {
-            let ron_path = config_directory.join("config.ron");
-            let had_ron_config = ron_path.exists();
-
-            println!("No config found at {:?}", config_directory);
-            println!("Creating default Lua config...");
-            init_config()?;
-
-            if had_ron_config {
-                println!("\n NOTICE: OXWM has migrated to Lua configuration.");
-                println!("   Your old config.ron has been preserved, but is no longer used.");
-                println!("   Your settings have been reset to defaults.");
-                println!("   Please manually port your configuration to the new Lua format.");
-                println!("   See the new config.lua template for examples.\n");
-            }
-        }
-
-        lua_path
-    };
-
+fn load_config(config_path: PathBuf) -> Result<(oxwm::Config, bool), Box<dyn std::error::Error>> {
+    check_convert(&config_path)
+        .map_err(|error| format!("Failed to check old config:\n{}", error))?;
     let config_string = std::fs::read_to_string(&config_path)
-        .map_err(|error| format!("Failed to read config file: {}", error))?;
+        .map_err(|error| format!("Failed to read config file:\n{}", error))?;
 
     let config_directory = config_path.parent();
 
     match oxwm::config::parse_lua_config(&config_string, config_directory) {
-        Ok(mut config) => {
-            config.path = Some(config_path);
-            Ok((config, false))
-        }
+        Ok(config) => Ok((config, false)),
         Err(_error) => {
-            let template = include_str!("../../templates/config.lua");
-            let config = oxwm::config::parse_lua_config(template, None)
-                .map_err(|error| format!("Failed to parse default template config: {}", error))?;
+            let config = oxwm::config::parse_lua_config(TEMPLATE, None)
+                .map_err(|error| format!("Failed to parse default template config:\n{}", error))?;
             Ok((config, true))
         }
     }
@@ -138,4 +111,68 @@ fn print_help() {
     println!("FIRST RUN:");
     println!("    Run 'oxwm --init' to create a config file");
     println!("    Or just start oxwm and it will create one automatically\n");
+}
+
+fn process_args() -> Args {
+    let name = match std::env::args().nth(0) {
+        Some(n) => n,
+        None => return Args::Error("Program name can't be extracted from args".to_string()),
+    };
+    let switch = std::env::args().nth(1);
+    let path = std::env::args().nth(2);
+
+    let switch = match switch {
+        Some(s) => s,
+        None => return Args::Arguments(vec![name]),
+    };
+
+    match switch.as_str() {
+        "--version" => {
+            println!("{name} {}", env!("CARGO_PKG_VERSION"));
+            Args::Exit
+        }
+        "--help" => {
+            print_help();
+            Args::Exit
+        }
+        "--init" => {
+            init_config().expect("Failed to create default config");
+            Args::Exit
+        }
+        "--config" => {
+            if let Some(path) = path
+                && std::fs::exists(&path).is_ok()
+                && std::fs::exists(&path).unwrap() == true
+            {
+                Args::Arguments(vec![name, switch, path])
+            } else {
+                Args::Error("Error: --config requires a valid path argument".to_string())
+            }
+        }
+        _ => Args::Error(format!("Error: {switch} is an unknown argument")),
+    }
+}
+
+fn check_convert(path: &PathBuf) -> Result<(), &str> {
+    let config_directory = get_config_path();
+
+    if !path.exists() {
+        let ron_path = config_directory.join("config.ron");
+        let had_ron_config = ron_path.exists();
+
+        println!("No config found at {:?}", config_directory);
+        println!("Creating default Lua config...");
+        if init_config().is_err() {
+            return Err("Failed to create default lua");
+        }
+
+        if had_ron_config {
+            println!("\n NOTICE: OXWM has migrated to Lua configuration.");
+            println!("   Your old config.ron has been preserved, but is no longer used.");
+            println!("   Your settings have been reset to defaults.");
+            println!("   Please manually port your configuration to the new Lua format.");
+            println!("   See the new config.lua template for examples.\n");
+        }
+    }
+    Ok(())
 }
