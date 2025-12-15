@@ -25,6 +25,7 @@
         packages = [
           pkgs.rustc
           pkgs.cargo
+          pkgs.clippy
           pkgs.alacritty
           pkgs.just
           pkgs.xorg.xorgserver
