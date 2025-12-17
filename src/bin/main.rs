@@ -14,17 +14,17 @@ fn main() {
     let arguments = match process_args() {
         Args::Exit => return,
         Args::Arguments(v) => v,
-        Args::Error(e) => panic!("Could not get valid arguments:\n{}", e),
+        Args::Error(e) => panic!("Error: Could not get valid arguments:\n{}", e),
     };
 
     let (config, had_broken_config) = match load_config(arguments.get(2)) {
         Ok((c, hbc)) => (c, hbc),
-        Err(e) => panic!("Could not load config:\n{}", e),
+        Err(e) => panic!("Error: Could not load config:\n{}", e),
     };
 
     let mut window_manager = match oxwm::window_manager::WindowManager::new(config) {
         Ok(wm) => wm,
-        Err(e) => panic!("Could not start window manager:\n{}", e),
+        Err(e) => panic!("Error: Could not start window manager:\n{}", e),
     };
 
     if had_broken_config {
@@ -33,7 +33,7 @@ fn main() {
 
     let should_restart = match window_manager.run() {
         Ok(sr) => sr,
-        Err(e) => panic!("{}", e),
+        Err(e) => panic!("Error: Could not determine restart\n{}", e),
     };
 
     drop(window_manager);
@@ -43,7 +43,7 @@ fn main() {
         let error = std::process::Command::new(&arguments[0])
             .args(&arguments[1..])
             .exec();
-        eprintln!("Failed to restart: {}", error);
+        eprintln!("Error: Failed to restart: {}", error);
     }
 }
 
@@ -54,22 +54,23 @@ fn load_config(
         None => {
             let config_path = get_config_path().join(CONFIG_FILE);
             check_convert(&config_path)
-                .map_err(|error| format!("Failed to check old config:\n{}", error))?;
+                .map_err(|error| format!("Error: Failed to check old config:\n{}", error))?;
             config_path
         }
         Some(p) => PathBuf::from(p),
     };
 
     let config_string = std::fs::read_to_string(&path)
-        .map_err(|error| format!("Failed to read config file:\n{}", error))?;
+        .map_err(|error| format!("Error: Failed to read config file:\n{}", error))?;
 
     let config_directory = path.parent();
 
     match oxwm::config::parse_lua_config(&config_string, config_directory) {
         Ok(config) => Ok((config, false)),
         Err(_error) => {
-            let config = oxwm::config::parse_lua_config(TEMPLATE, None)
-                .map_err(|error| format!("Failed to parse default template config:\n{}", error))?;
+            let config = oxwm::config::parse_lua_config(TEMPLATE, None).map_err(|error| {
+                format!("Error: Failed to parse default template config:\n{}", error)
+            })?;
             Ok((config, true))
         }
     }
@@ -119,7 +120,7 @@ fn process_args() -> Args {
     let mut args = std::env::args();
     let name = match args.next() {
         Some(n) => n,
-        None => return Args::Error("Program name can't be extracted from args".to_string()),
+        None => return Args::Error("Error: Program name can't be extracted from args".to_string()),
     };
     let switch = args.next();
     let path = args.next();
@@ -140,19 +141,30 @@ fn process_args() -> Args {
         }
         "--init" => match init_config() {
             Ok(_) => Args::Exit,
-            Err(e) => Args::Error(format!("Failed to create default config:\n{e}")),
+            Err(e) => Args::Error(format!("Error: Failed to create default config:\n{e}")),
         },
-        "--config" => {
-            if let Some(path) = path
-                && std::fs::exists(&path).is_ok()
-                && std::fs::exists(&path).unwrap()
-            {
-                Args::Arguments(vec![name, switch, path])
-            } else {
-                Args::Error("Error: --config requires a valid path argument".to_string())
-            }
-        }
+        "--config" => match check_custom_config(path) {
+            Ok(p) => Args::Arguments(vec![name, switch, p]),
+            Err(e) => Args::Error(e),
+        },
         _ => Args::Error(format!("Error: {switch} is an unknown argument")),
+    }
+}
+
+fn check_custom_config(path: Option<String>) -> Result<String, String> {
+    let path = match path {
+        Some(p) => p,
+        None => {
+            return Err("Error: --config requires a valid path argument".to_string());
+        }
+    };
+
+    match std::fs::exists(&path) {
+        Ok(b) => match b {
+            true => Ok(path),
+            false => Err(format!("Error: {path} does not exist")),
+        },
+        Err(e) => Err(format!("Error: Failed to check config exists:\n{e}")),
     }
 }
 
@@ -166,7 +178,7 @@ fn check_convert(path: &Path) -> Result<(), &str> {
         println!("No config found at {:?}", config_directory);
         println!("Creating default Lua config...");
         if init_config().is_err() {
-            return Err("Failed to create default lua");
+            return Err("Error: Failed to create default lua");
         }
 
         if had_ron_config {
