@@ -99,6 +99,7 @@ pub struct Config {
     pub scheme_normal: ColorScheme,
     pub scheme_occupied: ColorScheme,
     pub scheme_selected: ColorScheme,
+    pub scheme_urgent: ColorScheme,
 
     pub autostart: Vec<String>,
     pub auto_tile: bool,
@@ -344,6 +345,11 @@ impl Default for Config {
                 foreground: 0x0db9d7,
                 background: 0x1a1b26,
                 underline: 0xad8ee6,
+            },
+            scheme_urgent: ColorScheme {
+                foreground: 0xff5555,
+                background: 0x1a1b26,
+                underline: 0xff5555,
             },
             autostart: vec![],
             auto_tile: false,

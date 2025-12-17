@@ -56,6 +56,7 @@ oxwm.bar.set_font("JetBrainsMono Nerd Font:style=Bold:size=12")
 oxwm.bar.set_scheme_normal(colors.fg, colors.bg, 0x444444)
 oxwm.bar.set_scheme_occupied(colors.cyan, colors.bg, colors.cyan)
 oxwm.bar.set_scheme_selected(colors.cyan, colors.bg, colors.purple)
+oxwm.bar.set_scheme_urgent(colors.red, colors.bg, colors.red)
 
 oxwm.key.chord({
     { { modkey }, "Space" },

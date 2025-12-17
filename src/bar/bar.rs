@@ -30,6 +30,7 @@ pub struct Bar {
     scheme_normal: crate::ColorScheme,
     scheme_occupied: crate::ColorScheme,
     scheme_selected: crate::ColorScheme,
+    scheme_urgent: crate::ColorScheme,
 }
 
 impl Bar {
@@ -136,6 +137,7 @@ impl Bar {
             scheme_normal: config.scheme_normal,
             scheme_occupied: config.scheme_occupied,
             scheme_selected: config.scheme_selected,
+            scheme_urgent: config.scheme_urgent,
         })
     }
 
@@ -183,6 +185,7 @@ impl Bar {
         display: *mut x11::xlib::Display,
         current_tags: u32,
         occupied_tags: u32,
+        urgent_tags: u32,
         draw_blocks: bool,
         layout_symbol: &str,
         keychord_indicator: Option<&str>,
@@ -218,11 +221,14 @@ impl Bar {
             let tag_mask = 1 << tag_index;
             let is_selected = (current_tags & tag_mask) != 0;
             let is_occupied = (occupied_tags & tag_mask) != 0;
+            let is_urgent = (urgent_tags & tag_mask) != 0;
 
             let tag_width = self.tag_widths[tag_index];
 
             let scheme = if is_selected {
                 &self.scheme_selected
+            } else if is_urgent {
+                &self.scheme_urgent
             } else if is_occupied {
                 &self.scheme_occupied
             } else {
@@ -238,7 +244,7 @@ impl Bar {
             self.font_draw
                 .draw_text(font, scheme.foreground, text_x, text_y, tag);
 
-            if is_selected {
+            if is_selected || is_urgent {
                 let font_height = font.height();
                 let underline_height = font_height / 8;
                 let bottom_gap = 3;
@@ -406,6 +412,7 @@ impl Bar {
         self.scheme_normal = config.scheme_normal;
         self.scheme_occupied = config.scheme_occupied;
         self.scheme_selected = config.scheme_selected;
+        self.scheme_urgent = config.scheme_urgent;
 
         self.status_text.clear();
         self.needs_redraw = true;

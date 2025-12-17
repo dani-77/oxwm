@@ -48,6 +48,7 @@ pub fn parse_lua_config(
         scheme_normal: builder_data.scheme_normal,
         scheme_occupied: builder_data.scheme_occupied,
         scheme_selected: builder_data.scheme_selected,
+        scheme_urgent: builder_data.scheme_urgent,
         autostart: builder_data.autostart,
         auto_tile: builder_data.auto_tile,
         path: None,

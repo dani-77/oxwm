@@ -670,9 +670,13 @@ impl WindowManager {
         for (monitor_index, monitor) in self.monitors.iter().enumerate() {
             if let Some(bar) = self.bars.get_mut(monitor_index) {
                 let mut occupied_tags: TagMask = 0;
+                let mut urgent_tags: TagMask = 0;
                 for client in self.clients.values() {
                     if client.monitor_index == monitor_index {
                         occupied_tags |= client.tags;
+                        if client.is_urgent {
+                            urgent_tags |= client.tags;
+                        }
                     }
                 }
 
@@ -684,6 +688,7 @@ impl WindowManager {
                     self.display,
                     monitor.tagset[monitor.selected_tags_index],
                     occupied_tags,
+                    urgent_tags,
                     draw_blocks,
                     &layout_symbol,
                     keychord_indicator.as_deref(),
@@ -2065,6 +2070,10 @@ impl WindowManager {
         if let Some(win) = win {
             if !self.windows.contains(&win) {
                 return Ok(());
+            }
+
+            if self.clients.get(&win).is_some_and(|c| c.is_urgent) {
+                self.set_urgent(win, false)?;
             }
 
             let monitor_idx = self

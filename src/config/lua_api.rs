@@ -32,6 +32,7 @@ pub struct ConfigBuilder {
     pub scheme_normal: ColorScheme,
     pub scheme_occupied: ColorScheme,
     pub scheme_selected: ColorScheme,
+    pub scheme_urgent: ColorScheme,
     pub autostart: Vec<String>,
     pub auto_tile: bool,
 }
@@ -71,6 +72,11 @@ impl Default for ConfigBuilder {
                 foreground: 0xffffff,
                 background: 0x000000,
                 underline: 0x444444,
+            },
+            scheme_urgent: ColorScheme {
+                foreground: 0xff5555,
+                background: 0x000000,
+                underline: 0xff5555,
             },
             autostart: Vec::new(),
             auto_tile: false,
@@ -705,6 +711,21 @@ fn register_bar_module(
             Ok(())
         })?;
 
+    let builder_clone = builder.clone();
+    let set_scheme_urgent =
+        lua.create_function(move |_, (fg, bg, ul): (Value, Value, Value)| {
+            let foreground = parse_color_value(fg)?;
+            let background = parse_color_value(bg)?;
+            let underline = parse_color_value(ul)?;
+
+            builder_clone.borrow_mut().scheme_urgent = ColorScheme {
+                foreground,
+                background,
+                underline,
+            };
+            Ok(())
+        })?;
+
     bar_table.set("set_font", set_font)?;
     bar_table.set("block", block_table)?;
     bar_table.set("add_block", add_block)?; // Deprecated, for backwards compatibility
@@ -712,6 +733,7 @@ fn register_bar_module(
     bar_table.set("set_scheme_normal", set_scheme_normal)?;
     bar_table.set("set_scheme_occupied", set_scheme_occupied)?;
     bar_table.set("set_scheme_selected", set_scheme_selected)?;
+    bar_table.set("set_scheme_urgent", set_scheme_urgent)?;
     parent.set("bar", bar_table)?;
     Ok(())
 }

@@ -169,6 +169,8 @@ oxwm.bar.set_scheme_normal(colors.fg, colors.bg, "#444444")
 oxwm.bar.set_scheme_occupied(colors.cyan, colors.bg, colors.cyan)
 -- Currently selected tag
 oxwm.bar.set_scheme_selected(colors.cyan, colors.bg, colors.purple)
+-- Urgent tags (windows requesting attention)
+oxwm.bar.set_scheme_urgent(colors.red, colors.bg, colors.red)
 
 -------------------------------------------------------------------------------
 -- Keybindings

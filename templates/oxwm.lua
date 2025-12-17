@@ -309,6 +309,12 @@ function oxwm.bar.set_scheme_occupied(foreground, background, underline) end
 ---@param underline string|integer Underline color
 function oxwm.bar.set_scheme_selected(foreground, background, underline) end
 
+---Set urgent tag color scheme (tags with urgent windows)
+---@param foreground string|integer Foreground color
+---@param background string|integer Background color
+---@param underline string|integer Underline color
+function oxwm.bar.set_scheme_urgent(foreground, background, underline) end
+
 ---Add an autostart command
 ---@param cmd string Command to run at startup
 function oxwm.autostart(cmd) end
