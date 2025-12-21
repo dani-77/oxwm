@@ -135,7 +135,7 @@ impl FontDraw {
     pub fn sync(&self) {
         unsafe {
             let display = x11::xft::XftDrawDisplay(self.xft_draw);
-            x11::xlib::XSync(display, 0);
+            x11::xlib::XSync(display, 1);
         }
     }
 }

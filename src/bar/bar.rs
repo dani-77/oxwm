@@ -362,7 +362,7 @@ impl Bar {
                 0,
             );
             x11::xlib::XFreeGC(display, gc);
-            x11::xlib::XSync(display, 0);
+            x11::xlib::XSync(display, 1);
         }
 
         self.needs_redraw = false;
