@@ -26,11 +26,8 @@ fn main() -> Result<(), MainError> {
         Err(e) => return Err(MainError::CouldNotStartWm(e)),
     };
 
-    if let Some(error) = config_error {
-        // Change show_startup_config_error to accept a ConfigError instead of
-        // a string slice.
-        let error = format!("{error}");
-        window_manager.show_startup_config_error(&error);
+    if let Some(warning) = config_warning {
+        window_manager.show_startup_config_error(warning);
     }
 
     let should_restart = match window_manager.run() {

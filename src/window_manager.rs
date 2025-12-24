@@ -1,7 +1,7 @@
 use crate::Config;
 use crate::bar::Bar;
 use crate::client::{Client, TagMask};
-use crate::errors::WmError;
+use crate::errors::{ConfigError, WmError};
 use crate::keyboard::{self, Arg, KeyAction, handlers};
 use crate::layout::GapConfig;
 use crate::layout::tiling::TilingLayout;
@@ -312,17 +312,18 @@ impl WindowManager {
         Ok(window_manager)
     }
 
-    pub fn show_startup_config_error(&mut self, error: &str) {
+    pub fn show_startup_config_error(&mut self, error: ConfigError) {
         let monitor = &self.monitors[self.selected_monitor];
         let monitor_x = monitor.screen_x as i16;
         let monitor_y = monitor.screen_y as i16;
         let screen_width = monitor.screen_width as u16;
         let screen_height = monitor.screen_height as u16;
+        let error = format!("{error}");
 
         if let Err(e) = self.overlay.show_error(
             &self.connection,
             &self.font,
-            error,
+            error.as_str(),
             monitor_x,
             monitor_y,
             screen_width,
