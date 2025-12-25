@@ -21,7 +21,7 @@
 -- Modifier key: "Mod4" is the Super/Windows key, "Mod1" is Alt
 local modkey = "Mod4"
 
--- Terminal emulator command (defualts to alacritty)
+-- Terminal emulator command (defaults to alacritty)
 local terminal = "alacritty"
 
 -- Color palette - customize these to match your theme
