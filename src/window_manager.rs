@@ -323,12 +323,11 @@ impl WindowManager {
         let monitor_y = monitor.screen_y as i16;
         let screen_width = monitor.screen_width as u16;
         let screen_height = monitor.screen_height as u16;
-        let error = format!("{error}");
 
         if let Err(e) = self.overlay.show_error(
             &self.connection,
             &self.font,
-            error.as_str(),
+            error,
             monitor_x,
             monitor_y,
             screen_width,
@@ -338,23 +337,23 @@ impl WindowManager {
         }
     }
 
-    fn try_reload_config(&mut self) -> Result<(), String> {
-        let lua_path =
-            self.config.path.as_ref().ok_or(
-                "Could not find config file. Config path should've been set while loading",
-            )?;
+    fn try_reload_config(&mut self) -> Result<(), ConfigError> {
+        let lua_path = self
+            .config
+            .path
+            .as_ref()
+            .ok_or(ConfigError::NoConfigPathSet)?;
 
         if !lua_path.exists() {
-            return Err("Could not find config file, has it been moved?".to_string());
+            return Err(ConfigError::NoConfigAtPath);
         }
 
-        let config_str = std::fs::read_to_string(lua_path)
-            .map_err(|e| format!("Failed to read config: {}", e))?;
+        let config_str =
+            std::fs::read_to_string(lua_path).map_err(|e| ConfigError::CouldNotReadConfig(e))?;
 
         let config_dir = lua_path.parent();
 
-        let new_config = crate::config::parse_lua_config(&config_str, config_dir)
-            .map_err(|e| format!("{}", e))?;
+        let new_config = crate::config::parse_lua_config(&config_str, config_dir)?;
 
         let lua_path = self.config.path.take();
 
@@ -2881,7 +2880,7 @@ impl WindowManager {
                                 }
                                 Err(err) => {
                                     eprintln!("Config reload error: {}", err);
-                                    self.error_message = Some(err.clone());
+                                    self.error_message = Some(err.to_string());
                                     let monitor = &self.monitors[self.selected_monitor];
                                     let monitor_x = monitor.screen_x as i16;
                                     let monitor_y = monitor.screen_y as i16;
@@ -2890,7 +2889,7 @@ impl WindowManager {
                                     match self.overlay.show_error(
                                         &self.connection,
                                         &self.font,
-                                        &err,
+                                        err,
                                         monitor_x,
                                         monitor_y,
                                         screen_width,

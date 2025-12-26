@@ -1,6 +1,6 @@
 use super::{Overlay, OverlayBase};
 use crate::bar::font::Font;
-use crate::errors::X11Error;
+use crate::errors::{ConfigError, X11Error};
 use x11rb::connection::Connection;
 use x11rb::protocol::xproto::*;
 use x11rb::rust_connection::RustConnection;
@@ -47,14 +47,14 @@ impl ErrorOverlay {
         &mut self,
         connection: &RustConnection,
         font: &Font,
-        error_text: &str,
+        error: ConfigError,
         monitor_x: i16,
         monitor_y: i16,
         screen_width: u16,
         screen_height: u16,
     ) -> Result<(), X11Error> {
         let max_line_width = (screen_width as i16 / 2 - PADDING * 4).max(300) as u16;
-        let error_with_instruction = format!("{}\n\nFix the config file and reload.", error_text);
+        let error_with_instruction = format!("{}\n\nFix the config file and reload.", error);
         self.lines = self.wrap_text(&error_with_instruction, font, max_line_width);
 
         let mut content_width = 0u16;

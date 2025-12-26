@@ -29,6 +29,9 @@ pub enum ConfigError {
     UnknownBlockCommand(String),
     MissingCommandArg { command: String, field: String },
     ValidationError(String),
+    NoConfigPathSet,
+    NoConfigAtPath,
+    CouldNotReadConfig(std::io::Error),
 }
 
 #[derive(Debug)]
@@ -97,6 +100,12 @@ impl std::fmt::Display for ConfigError {
                 write!(f, "{} command requires {}", command, field)
             }
             Self::ValidationError(msg) => write!(f, "{}", msg),
+            Self::NoConfigPathSet => write!(
+                f,
+                "Could not find config file. Config path should've been set while loading"
+            ),
+            Self::NoConfigAtPath => write!(f, "Could not find config file, has it been moved?"),
+            Self::CouldNotReadConfig(e) => write!(f, "Could not read config: {e}"),
         }
     }
 }
