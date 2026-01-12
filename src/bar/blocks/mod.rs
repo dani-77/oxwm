@@ -2,11 +2,13 @@ use crate::errors::BlockError;
 use std::time::Duration;
 
 mod battery;
+mod cpu;
 mod datetime;
 mod ram;
 mod shell;
 
 use battery::Battery;
+use cpu::Cpu;
 use datetime::DateTime;
 use ram::Ram;
 use shell::ShellBlock;
@@ -37,6 +39,7 @@ pub enum BlockCommand {
         battery_name: Option<String>,
     },
     Ram,
+    Cpu,
     Static(String),
 }
 
@@ -69,6 +72,7 @@ impl BlockConfig {
                 battery_name.clone(),
             )),
             BlockCommand::Ram => Box::new(Ram::new(&self.format, self.interval_secs, self.color)),
+	    BlockCommand::Cpu => Box::new(Cpu::new(&self.format, self.interval_secs, self.color)),
             BlockCommand::Static(text) => Box::new(StaticBlock::new(
                 &format!("{}{}", self.format, text),
                 self.color,
