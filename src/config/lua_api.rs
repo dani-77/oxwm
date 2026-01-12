@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use crate::ColorScheme;
 use crate::bar::BlockConfig;
+use crate::bar::BlockCommand;
 use crate::errors::ConfigError;
 use crate::keyboard::handlers::{Arg, KeyAction, KeyBinding, KeyPress};
 use crate::keyboard::keysyms::{self, Keysym};
@@ -300,16 +301,8 @@ fn register_layout_module(lua: &Lua, parent: &Table) -> Result<(), ConfigError> 
         )
     })?;
 
-    let scroll_left =
-        lua.create_function(|lua, ()| create_action_table(lua, "ScrollLeft", Value::Nil))?;
-
-    let scroll_right =
-        lua.create_function(|lua, ()| create_action_table(lua, "ScrollRight", Value::Nil))?;
-
     layout_table.set("cycle", cycle)?;
     layout_table.set("set", set)?;
-    layout_table.set("scroll_left", scroll_left)?;
-    layout_table.set("scroll_right", scroll_right)?;
     parent.set("layout", layout_table)?;
     Ok(())
 }
@@ -449,6 +442,9 @@ fn register_bar_module(
     let ram =
         lua.create_function(|lua, config: Table| create_block_config(lua, config, "Ram", None))?;
 
+    let cpu =
+	lua.create_function(|lua, config: Table| create_block_config(lua, config, "Cpu", None))?;
+
     let datetime = lua.create_function(|lua, config: Table| {
         let date_format: String = config.get("date_format").map_err(|_| {
             mlua::Error::RuntimeError(
@@ -509,8 +505,8 @@ fn register_bar_module(
 
         create_block_config(lua, config, "Battery", Some(Value::Table(formats_table)))
     })?;
-
     block_table.set("ram", ram)?;
+    block_table.set("cpu", cpu)?;
     block_table.set("datetime", datetime)?;
     block_table.set("shell", shell)?;
     block_table.set("static", static_block)?;
@@ -541,6 +537,7 @@ fn register_bar_module(
                 crate::bar::BlockCommand::Shell(cmd_str)
             }
             "Ram" => crate::bar::BlockCommand::Ram,
+	    "Cpu" => BlockCommand::Cpu, 
             "Static" => {
                 let text = if let Value::String(s) = arg {
                     s.to_str()?.to_string()
@@ -616,6 +613,7 @@ fn register_bar_module(
                     BlockCommand::Shell(cmd_str)
                 }
                 "Ram" => BlockCommand::Ram,
+		"Cpu" => BlockCommand::Cpu,
                 "Static" => {
                     let text = arg
                         .and_then(|v| {
@@ -937,8 +935,6 @@ fn string_to_action(s: &str) -> mlua::Result<KeyAction> {
         "FocusMonitor" => Ok(KeyAction::FocusMonitor),
         "TagMonitor" => Ok(KeyAction::TagMonitor),
         "ShowKeybindOverlay" => Ok(KeyAction::ShowKeybindOverlay),
-        "ScrollLeft" => Ok(KeyAction::ScrollLeft),
-        "ScrollRight" => Ok(KeyAction::ScrollRight),
         _ => Err(mlua::Error::RuntimeError(format!(
             "unknown action '{}'. this is an internal error, please report it",
             s
